@@ -1,0 +1,14 @@
+[Unit]
+Description=Keep Minecraft containers away from the home network
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/mcbot/deploy/mc-isolate.sh apply
+ExecStop=/opt/mcbot/deploy/mc-isolate.sh remove
+
+[Install]
+WantedBy=multi-user.target docker.service

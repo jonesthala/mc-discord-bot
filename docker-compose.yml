@@ -1,0 +1,24 @@
+services:
+  bot:
+    build: .
+    container_name: mcbot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Must match the volume below. To use another folder, change both.
+      MC_DATA_DIR: /srv/minecraft
+    volumes:
+      # Lets the bot start and stop the Minecraft containers. Whoever controls this socket
+      # controls the Docker host, so run the bot on a dedicated VM or LXC.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Same path inside and outside, so bind mounts for the game containers line up.
+      - /srv/minecraft:/srv/minecraft
+
+  # Public address for players without opening a port on the router (works behind CGNAT).
+  # Forwarding port 25565 yourself, or LAN only? Delete this service.
+  playit:
+    image: ghcr.io/playit-cloud/playit-agent:0.15
+    container_name: playit
+    restart: unless-stopped
+    network_mode: host
+    env_file: playit.env
