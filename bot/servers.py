@@ -17,7 +17,17 @@ from docker.errors import ImageNotFound, NotFound
 from docker.types import IPAMConfig, IPAMPool
 
 from .config import Settings
-from .core import SERVER_TYPES, McError, ServerConfig, Store, normalize_name, parse_player_list, version_from_log
+from .core import (
+    SERVER_TYPES,
+    McError,
+    ServerConfig,
+    Store,
+    explain_exit,
+    normalize_name,
+    parse_player_list,
+    version_from_log,
+)
+from .players import Lookup, check_account, lookup_player
 from .versions import VersionCatalog
 
 log = logging.getLogger("mcbot.servers")
@@ -39,11 +49,12 @@ def container_name(server: str) -> str:
 
 class ServerManager:
     def __init__(self, settings: Settings, store: Store | None = None, client: Any = None,
-                 versions: VersionCatalog | None = None) -> None:
+                 versions: VersionCatalog | None = None, lookup: Lookup = lookup_player) -> None:
         self.s = settings
         self.store = store or Store(settings.data_dir)
         self.client = client or docker.from_env()
         self.versions = versions or VersionCatalog()
+        self.lookup = lookup
         self.lock = threading.Lock()
         self.expected_stops: set[str] = set()
 
@@ -211,6 +222,14 @@ class ServerManager:
             raise McError(f"**{name}** wurde noch nie gestartet.")
         return _ANSI_RE.sub("", container.logs(tail=lines).decode("utf-8", "replace"))
 
+    def explain_exit(self, name: str) -> str | None:
+        """Why a server stopped unexpectedly, if its last log lines tell. Never raises."""
+        try:
+            return explain_exit(name, self.logs(name, lines=60))
+        except Exception:  # noqa: BLE001 - the plain "stopped unexpectedly" message is still posted
+            log.warning("Could not read the log of %s", name, exc_info=True)
+            return None
+
     def quick_status(self) -> tuple[str, str | None, tuple[int, int, list[str]] | None] | None:
         name = self.running_name()
         if name is None:
@@ -278,7 +297,9 @@ class ServerManager:
             return self.store.move_to_trash(name)
 
     # --- whitelist ---------------------------------------------------------
-    def whitelist_add(self, player: str) -> tuple[str, str | None]:
+    def whitelist_add(self, player: str) -> tuple[str, str | None, bool]:
+        """(stored name, server it applies to live, whether the account was verified)."""
+        player, verified = check_account(player, self.lookup)  # network call
         player = self.store.whitelist_add(player)
         running = self.running_name()
         if running:
@@ -286,7 +307,7 @@ class ServerManager:
                 self.rcon(running, f"whitelist add {player}")
             except McError:
                 running = None
-        return player, running
+        return player, running, verified
 
     def whitelist_remove(self, player: str) -> tuple[str, str | None]:
         player = self.store.whitelist_remove(player)

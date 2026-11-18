@@ -129,7 +129,12 @@ class McBot(discord.Client):
                         "niemand online war."
                     )
                 elif not expected:
-                    await self.post(f"⚠️ **{name}** ist unerwartet beendet worden (Exit-Code {code}).")
+                    reason = await asyncio.to_thread(self.mgr.explain_exit, name)
+                    await self.post(
+                        f"⚠️ {reason}" if reason else
+                        f"⚠️ **{name}** ist unerwartet beendet worden (Exit-Code {code}). "
+                        f"Ein MC-Admin kann mit `/mc logs {name}` nachschauen."
+                    )
                 saved = await asyncio.to_thread(self.mgr.backup_after_stop, name)
                 if saved:
                     await self.post(f"💾 Backup von **{name}** gespeichert.")
@@ -342,8 +347,14 @@ def build_commands(bot: McBot) -> app_commands.Group:
     @admin_only
     async def whitelist_add(interaction: discord.Interaction, player: str) -> None:
         await interaction.response.defer(thinking=True)
-        name, live = await asyncio.to_thread(bot.mgr.whitelist_add, player)
+        name, live, verified = await asyncio.to_thread(bot.mgr.whitelist_add, player)
         extra = f" Gilt sofort auch auf **{live}**." if live else ""
+        if not verified:
+            extra += (
+                "\n⚠️ Ich konnte gerade nicht prüfen, ob es den Namen gibt (playerdb.co und Mojang nicht "
+                "erreichbar). Ist er falsch geschrieben, startet kein Server, bis er mit "
+                f"`/mc whitelist remove {name}` wieder entfernt ist."
+            )
         await interaction.followup.send(f"✅ **{name}** darf jetzt mitspielen.{extra}")
 
     @whitelist.command(name="remove", description="Spieler von der Whitelist nehmen (nur MC-Admins)")

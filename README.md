@@ -154,7 +154,7 @@ Then follow the steps above inside the container (`pct enter 103`).
 | `/mc whitelist show` | everyone | Who may join |
 | `/mc create <name> <typ> <version>` | admins | New server; Discord suggests versions while you type |
 | `/mc delete <name>` | admins | Delete with a confirm button; the folder goes to `trash/` |
-| `/mc whitelist add/remove <player>` | admins | Edit the shared whitelist, applied live |
+| `/mc whitelist add/remove <player>` | admins | Edit the shared whitelist, applied live. `add` checks the name at playerdb.co (Mojang as fallback) and refuses names without an account |
 | `/mc backup [name]` | admins | Backup now, also while running |
 | `/mc logs [name]` | admins | Last lines of the server log (only you see it) |
 | `/mc console <command>` | admins | Run a console command via RCON (only you see the answer) |
@@ -228,6 +228,7 @@ A running game server keeps running while the bot restarts.
 | The server takes long to start | The first start downloads the server and generates the world. Admins: `/mc logs` |
 | Players can't join | Are they on the whitelist? Does their game version match? For playit: is the tunnel's local address `127.0.0.1:25565`? |
 | The server gets killed | Too little memory: lower `MC_MEMORY` or raise `MC_MEM_LIMIT` |
+| No server starts, the bot names a player | That name on the whitelist has no Minecraft account (typo, or the player renamed). The server image refuses to start then. Remove it with `/mc whitelist remove <name>` |
 
 ## Development
 
@@ -236,7 +237,8 @@ python -m unittest discover -s tests -v
 ```
 
 The tests cover everything that works without Docker or Discord: validation, version lists,
-settings, the whitelist, backups and the files on disk. They need no extra packages.
+player name checks, settings, the whitelist, backups and the files on disk. They need no extra
+packages and no network.
 
 ## Contributing
 

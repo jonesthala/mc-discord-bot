@@ -91,6 +91,25 @@ def version_from_log(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+# The itzg image resolves every whitelisted name before the server starts and gives up if one fails:
+# "ERROR : Invalid parameter provided for 'manage-users' command: Could not resolve user from Playerdb: Steve"
+_UNRESOLVED_RE = re.compile(r"Could not resolve user from \w+: ['\"]?([A-Za-z0-9_]{1,16})")
+
+
+def explain_exit(server: str, log_text: str) -> str | None:
+    """Why a server stopped right away, for Discord, if its last log lines tell; else None."""
+    match = _UNRESOLVED_RE.search(_ESCAPE_RE.sub("", log_text))
+    if not match:
+        return None
+    player = match.group(1)
+    return (
+        f"**{server}** konnte nicht starten, weil es den Minecraft-Namen **{player}** auf der Whitelist "
+        "nicht gibt (vertippt oder umbenannt?). Solange er dort steht, startet kein Server. "
+        f"Ein MC-Admin entfernt ihn mit `/mc whitelist remove {player}` und trägt den richtigen Namen "
+        "bei Bedarf mit `/mc whitelist add` neu ein."
+    )
+
+
 def _stamp() -> str:
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 

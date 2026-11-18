@@ -8,6 +8,7 @@ from bot.core import (
     McError,
     Store,
     check_player,
+    explain_exit,
     normalize_name,
     normalize_version,
     parse_player_list,
@@ -170,6 +171,29 @@ class VersionFromLogTest(unittest.TestCase):
         )
         self.assertEqual(version_from_log(log), "26.3")
         self.assertIsNone(version_from_log("nothing here"))
+
+
+class ExplainExitTest(unittest.TestCase):
+    def test_unknown_whitelist_name(self):
+        log = (
+            "[init] Running as uid=1000 gid=1000 with /data as 'drwxr-xr-x 1000 1000 /data'\n"
+            "[init] Resolving type given VANILLA\n"
+            "\x1b[31m[mc-image-helper] 14:02:11.123 ERROR : Invalid parameter provided for 'manage-users' "
+            "command: Could not resolve user from Playerdb: Stevee_01\x1b[0m\n"
+        )
+        message = explain_exit("survival", log)
+        self.assertIn("**survival**", message)
+        self.assertIn("**Stevee_01**", message)
+        self.assertIn("`/mc whitelist remove Stevee_01`", message)
+        self.assertNotIn("ß", message)
+
+    def test_other_provider_and_quotes(self):
+        message = explain_exit("sky", "ERROR : Could not resolve user from Mojang: 'Alex_2'\n")
+        self.assertIn("`/mc whitelist remove Alex_2`", message)
+
+    def test_nothing_known(self):
+        self.assertIsNone(explain_exit("survival", ""))
+        self.assertIsNone(explain_exit("survival", "java.lang.OutOfMemoryError: Java heap space\n"))
 
 
 if __name__ == "__main__":
