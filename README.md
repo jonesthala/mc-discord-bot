@@ -186,6 +186,28 @@ All settings live in `.env`.
 | `MC_IMAGE` | `itzg/minecraft-server:latest` | Game server image |
 | `MC_DATA_DIR` | `/srv/minecraft` | Data folder; set in `docker-compose.yml`, must match the volume there |
 | `TZ` | `UTC` | Time zone for logs and backup names |
+| `WEB_PORT` | `0` | Admin API for a web panel on this port; `0` = off (see below) |
+| `WEB_TOKEN` | – | Token the panel must send; at least 32 characters, e.g. `openssl rand -hex 32` |
+
+### Admin API (optional)
+
+With `WEB_PORT` and `WEB_TOKEN` set, the bot also answers HTTP: the same actions as `/mc`, as JSON, for a web panel
+such as the one in [seerr bot but better](https://github.com/jonesthala/seerr-bot-but-better). Every call needs
+`Authorization: Bearer <WEB_TOKEN>`. Publish the port only to your home network (`ports:` in `docker-compose.yml`
+or a `docker-compose.override.yml`).
+
+| Call | What it does |
+| --- | --- |
+| `GET /api/status` | Running server, players, RAM, all servers with their backups, whitelist |
+| `POST /api/start` `{"name"}`, `POST /api/stop` `{"force"}` | Start a server, stop the running one (`force` even with players online) |
+| `POST /api/backup` `{"name"}` | World backup now |
+| `GET /api/logs?name=&lines=` | Last log lines (at most 1000) |
+| `POST /api/console` `{"command"}` | Console command on the running server |
+| `POST /api/whitelist/add`, `/api/whitelist/remove` `{"player"}` | Whitelist |
+| `GET /api/versions?type=paper&q=` | Versions to choose from |
+| `POST /api/servers/create` `{"name","type","version"}`, `/api/servers/delete` `{"name"}` | Create, delete (to `trash/`) |
+
+Starting and stopping from the panel is announced in the Minecraft channel, so players know.
 
 ## Data on disk
 
@@ -216,6 +238,8 @@ A running game server keeps running while the bot restarts.
   DNS resolvers, and `mc-isolate` stops them from reaching your private networks.
 - **Secrets** (`.env`, `playit.env`) are git-ignored; keep them at mode 600.
 - **Deleting** a server never removes data; it moves to `trash/`.
+- **The admin API** (off unless `WEB_PORT` is set) can do what MC admins can, console included. Use a long random
+  `WEB_TOKEN`, keep it in `.env` only, and never publish the port to the internet.
 - Found a security problem? Please open a GitHub issue without exploit details, and I'll get in touch.
 
 ## Troubleshooting

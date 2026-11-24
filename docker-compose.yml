@@ -4,6 +4,9 @@ services:
     container_name: mcbot
     restart: unless-stopped
     env_file: .env
+    # Optional admin API for a web panel (WEB_PORT and WEB_TOKEN in .env). Only open it to your home network.
+    # ports:
+    #   - "8096:8096"
     environment:
       # Must match the volume below. To use another folder, change both.
       MC_DATA_DIR: /srv/minecraft

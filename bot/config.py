@@ -60,10 +60,17 @@ class Settings:
     backup_keep: int
     timezone: str
     motd: str = "Minecraft · {name}"
+    web_port: int = 0  # small HTTP API for an admin panel; 0 = off
+    web_token: str = ""  # the panel sends it as "Authorization: Bearer <token>"
 
     @classmethod
     def from_env(cls) -> "Settings":
         role_id = _int("DISCORD_ADMIN_ROLE_ID", 0)
+        web_port, web_token = _int("WEB_PORT", 0), _text("WEB_TOKEN")
+        if not 0 <= web_port <= 65535:
+            raise ConfigError("WEB_PORT must be a port number (or 0 for off)")
+        if web_port and len(web_token) < 32:
+            raise ConfigError("WEB_TOKEN needs at least 32 characters when WEB_PORT is set")
         return cls(
             discord_token=_required("DISCORD_TOKEN"),
             guild_id=_int("DISCORD_GUILD_ID"),
@@ -82,6 +89,8 @@ class Settings:
             backup_keep=_int("MC_BACKUP_KEEP", 5),
             timezone=_text("TZ", "UTC"),
             motd=_text("MC_MOTD", "Minecraft · {name}"),
+            web_port=web_port,
+            web_token=web_token,
         )
 
     def motd_for(self, server: str) -> str:

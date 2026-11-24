@@ -62,6 +62,7 @@ class McBot(discord.Client):
         self.tree = GuardedTree(self)
         self._ready_watch: dict[str, asyncio.Task[None]] = {}
         self._announced: set[str] = set()
+        self._web: Any = None  # the admin API, if WEB_PORT is set
 
     async def setup_hook(self) -> None:
         guild = discord.Object(id=self.settings.guild_id)
@@ -76,6 +77,10 @@ class McBot(discord.Client):
         for kind in ("paper", "vanilla"):  # load the version lists now, so autocomplete answers quickly
             loop.run_in_executor(None, self.mgr.versions.releases, kind)
         self.presence_loop.start()
+        if self.settings.web_port:
+            from .web import start_web  # aiohttp comes with discord.py
+
+            self._web = await start_web(self)
 
     async def on_ready(self) -> None:
         log.info("Logged in as %s", self.user)

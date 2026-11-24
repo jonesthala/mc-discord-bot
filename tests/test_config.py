@@ -30,6 +30,14 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(s.autostop_minutes, 5)
         self.assertLessEqual(len(self.load(MC_MOTD="x" * 100).motd_for("a")), 59)
 
+    def test_web_api(self):
+        self.assertEqual((self.load().web_port, self.load().web_token), (0, ""))
+        s = self.load(WEB_PORT="8096", WEB_TOKEN="a" * 64)
+        self.assertEqual((s.web_port, len(s.web_token)), (8096, 64))
+        for env in ({"WEB_PORT": "8096"}, {"WEB_PORT": "8096", "WEB_TOKEN": "short"}, {"WEB_PORT": "70000"}):
+            with self.assertRaises(ConfigError, msg=env):
+                self.load(**env)
+
     def test_errors(self):
         for env in ({"DISCORD_TOKEN": ""}, {"DISCORD_GUILD_ID": "abc"}, {"DISCORD_ADMIN_USER_IDS": "1,x"}):
             with self.assertRaises(ConfigError, msg=env):
